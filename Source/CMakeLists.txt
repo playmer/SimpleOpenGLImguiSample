@@ -8,7 +8,10 @@ PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/ApplicationContext.cpp
 )
 
-target_include_directories(SimpleOpenGLImguiSample PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(SimpleOpenGLImguiSample 
+PRIVATE 
+    ${CMAKE_CURRENT_LIST_DIR}
+    ${DependenciesDirectory}/glm)
 
 target_link_libraries(SimpleOpenGLImguiSample 
 PRIVATE 

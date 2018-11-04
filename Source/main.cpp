@@ -1,7 +1,23 @@
-// dear imgui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
-
+///////////////////////////////////////////////////////////////////////////
+// This is a sample application based on the Hello-Triangle example from 
+// LearnOpenGL.com and the ImGui demo application. It implements the ImGui
+// demo in the ImGuiSample struct and the Hello-Triangle example here in 
+// this file. It is intended to be an easy way to get up and running in
+// graphics programming without worrying about some of the other set up
+// (cmake, dependency management, platform management, GL loading layers,
+// etc...)
+// 
+// Most of your set up can happen after the context creation, and any
+// updates can happen inside of the while loop.
+//
+// Dependencies:
+// glbinding
+// GLFW
+// GLM
+// ImGui
+// ImGuizmo
+// stb libraries
+///////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
 #include <iostream>
 
@@ -10,11 +26,23 @@
 
 int main(int, char**)
 {
+  ///////////////////////////////////////////////////////////////////////////
+  // Application set up, after this you can run "any" OpenGL or ImGui code
+  // you'd like in the while loop down below.
+  ///////////////////////////////////////////////////////////////////////////
   SOIS::ApplicationInitialization();
   SOIS::ApplicationContext context;
 
+  ///////////////////////////////////////////////////////////////////////////
+  // This is not required to call any ImGui code you write. It's simply
+  // here to show you what's possible by showing you the ImGui base demo.
+  // Feel free to remove it and replace with your own ImGui code. (Or no
+  // ImGui code if you'd like.)
+  ///////////////////////////////////////////////////////////////////////////
   SOIS::ImGuiSample sample;
 
+
+  // The following is the Hello-Triangle example from learnopengl.com
   const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "void main()\n"
@@ -85,7 +113,8 @@ int main(int, char**)
   gl::glGenVertexArrays(1, &VAO);
   gl::glGenBuffers(1, &VBO);
   gl::glGenBuffers(1, &EBO);
-  // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+  // bind the Vertex Array Object first, then bind and set vertex buffer(s), 
+  // and then configure vertex attributes(s).
   gl::glBindVertexArray(VAO);
 
   gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO);
@@ -97,23 +126,38 @@ int main(int, char**)
   gl::glVertexAttribPointer(0, 3, gl::GL_FLOAT, gl::GL_FALSE, 3 * sizeof(float), (void*)0);
   gl::glEnableVertexAttribArray(0);
 
-  // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+  // note that this is allowed, the call to glVertexAttribPointer registered
+  // VBO as the vertex attribute's bound vertex buffer object so afterwards 
+  // we can safely unbind
   gl::glBindBuffer(gl::GL_ARRAY_BUFFER, 0);
 
-  // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+  // remember: do NOT unbind the EBO while a VAO is active as the bound 
+  // element buffer object IS stored in the VAO; keep the EBO bound.
   //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-  // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-  // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+  // You can unbind the VAO afterwards so other VAO calls won't accidentally
+  // modify this VAO, but this rarely happens. Modifying other VAOs requires
+  // a call to glBindVertexArray anyways so we generally don't unbind VAOs
+  // (nor VBOs) when it's not directly necessary.
   gl::glBindVertexArray(0);
 
   // Main loop
   while (context.Update())
   {
+    ///////////////////////////////////////////////////////////////////////////
+    // This really just calls the ImGui demo code. If you want to make your own
+    // GUI, just go to that code and read it for reference. It also calls into
+    // the giant imgui_demo.cpp demo file, which is a huge and wonderful imgui
+    // reference. So I suspect checking that out if you want to do more 
+    // interesting things.
+    ///////////////////////////////////////////////////////////////////////////
     sample.Update();
-
     context.mClearColor = sample.mClearColor;
 
+    ///////////////////////////////////////////////////////////////////////////
+    // The rest of the loop is just the stuff you need to do to actually run
+    // the hello-triangle example we set up above.
+    ///////////////////////////////////////////////////////////////////////////
     // draw our first triangle
     gl::glUseProgram(shaderProgram);
     gl::glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized

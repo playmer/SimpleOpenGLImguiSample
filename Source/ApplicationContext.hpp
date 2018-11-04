@@ -7,6 +7,8 @@
 #include <glbinding/gl/gl.h>
 #include <glbinding/glbinding.h>
 
+#include "glm/glm.hpp"
+
 namespace SOIS
 {
   // Call only once, loads OpenGL function pointers and other such work.
@@ -16,7 +18,7 @@ namespace SOIS
   {
   public:
     GLFWwindow* mWindow;
-    ImVec4 mClearColor;
+    glm::vec4 mClearColor;
     bool mRunning;
 
     ApplicationContext();

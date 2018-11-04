@@ -1,6 +1,7 @@
 #pragma once
 
 #include "imgui.h"
+#include "glm/glm.hpp"
 
 namespace SOIS
 {
@@ -8,7 +9,7 @@ namespace SOIS
     {
       bool show_demo_window = true;
       bool show_another_window = false;
-      ImVec4 mClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+      glm::vec4 mClearColor = glm::vec4(0.45f, 0.55f, 0.60f, 1.00f);
 
       void Update()
       {
