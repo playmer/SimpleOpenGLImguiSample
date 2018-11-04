@@ -1,4 +1,74 @@
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "ApplicationContext.hpp"
+
+static char const* Source(gl::GLenum source)
+{
+  switch (source)
+  {
+    case gl::GL_DEBUG_SOURCE_API: return "DEBUG_SOURCE_API";
+    case gl::GL_DEBUG_SOURCE_WINDOW_SYSTEM: return "DEBUG_SOURCE_WINDOW_SYSTEM";
+    case gl::GL_DEBUG_SOURCE_SHADER_COMPILER: return "DEBUG_SOURCE_SHADER_COMPILER";
+    case gl::GL_DEBUG_SOURCE_THIRD_PARTY: return "DEBUG_SOURCE_THIRD_PARTY";
+    case gl::GL_DEBUG_SOURCE_APPLICATION: return "DEBUG_SOURCE_APPLICATION";
+    case gl::GL_DEBUG_SOURCE_OTHER: return "DEBUG_SOURCE_OTHER";
+    default: return "unknown";
+  }
+}
+
+static char const* Severity(gl::GLenum severity)
+{
+  switch (severity)
+  {
+    case gl::GL_DEBUG_SEVERITY_HIGH: return "DEBUG_SEVERITY_HIGH";
+    case gl::GL_DEBUG_SEVERITY_MEDIUM: return "DEBUG_SEVERITY_MEDIUM";
+    case gl::GL_DEBUG_SEVERITY_LOW: return "DEBUG_SEVERITY_LOW";
+    case gl::GL_DEBUG_SEVERITY_NOTIFICATION: return "DEBUG_SEVERITY_NOTIFICATION";
+    default: return "unknown";
+  }
+}
+
+
+static char const* Type(gl::GLenum type)
+{
+  switch (type)
+  {
+    case gl::GL_DEBUG_TYPE_ERROR: return "DEBUG_TYPE_ERROR";
+    case gl::GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: return "DEBUG_TYPE_DEPRECATED_BEHAVIOR";
+    case gl::GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: return "DEBUG_TYPE_UNDEFINED_BEHAVIOR";
+    case gl::GL_DEBUG_TYPE_PORTABILITY: return "DEBUG_TYPE_PORTABILITY";
+    case gl::GL_DEBUG_TYPE_PERFORMANCE: return "DEBUG_TYPE_PERFORMANCE";
+    case gl::GL_DEBUG_TYPE_MARKER: return "DEBUG_TYPE_MARKER";
+    case gl::GL_DEBUG_TYPE_PUSH_GROUP: return "DEBUG_TYPE_PUSH_GROUP";
+    case gl::GL_DEBUG_TYPE_POP_GROUP: return "DEBUG_TYPE_POP_GROUP";
+    case gl::GL_DEBUG_TYPE_OTHER: return "DEBUG_TYPE_OTHER";
+    default: return "unknown";
+  }
+}
+
+static 
+void GL_APIENTRY messageCallback(gl::GLenum source,
+                                 gl::GLenum type,
+                                 gl::GLuint id,
+                                 gl::GLenum severity,
+                                 gl::GLsizei length,
+                                 const gl::GLchar* message,
+                                 const void* userParam)
+{
+  if (gl::GL_DEBUG_SEVERITY_NOTIFICATION == severity)
+  {
+    return;
+  }
+
+  printf("GL DEBUG CALLBACK:\n    Source = %s\n    type = %s\n    severity = %s\n    message = %s\n",
+         Source(source),
+         Type(type),
+         Severity(severity),
+         message);
+}
+
 
 static void glfw_error_callback(int aError, const char* aDescription)
 {
@@ -37,8 +107,9 @@ namespace SOIS
     #endif
 
     // Create window with graphics context
-    mWindow = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
-    if (mWindow == NULL)
+    mWindow = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 Sample Application", NULL, NULL);
+
+    if (nullptr == mWindow)
     {
       return;
     }
@@ -49,35 +120,25 @@ namespace SOIS
     // Initialize OpenGL loader
     glbinding::initialize(glfwGetProcAddress);
 
+    gl::glEnable(gl::GL_DEBUG_OUTPUT);
+    gl::glDebugMessageCallback(messageCallback, this);
+
     // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Setup style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Read 'misc/fonts/README.txt' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != NULL);
 
+    // We run a begin frame here once, because the update function (meant to 
+    // be run as the condition to a while loop.) needs to run both the begin
+    // frame work (which it does after checking if it should continue the 
+    // frame), and the end frame work (which it does before checking if it
+    // should continue running). So we need to prepare for the first end frame.
     BeginFrame();
   }
 
@@ -126,20 +187,23 @@ namespace SOIS
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    // Clear the viewport to prepare for user rendering.
+    int display_w, display_h;
+    glfwMakeContextCurrent(mWindow);
+    glfwGetFramebufferSize(mWindow, &display_w, &display_h);
+    gl::glViewport(0, 0, display_w, display_h);
+    gl::glClearColor(mClearColor.x, mClearColor.y, mClearColor.z, mClearColor.w);
+    gl::glClear(gl::GL_COLOR_BUFFER_BIT);
   }
 
   void ApplicationContext::EndFrame()
   {
-    // Rendering
+    // Rendering Dear ImGui.
     ImGui::Render();
-    int display_w, display_h;
-    glfwMakeContextCurrent(mWindow);
-    glfwGetFramebufferSize(mWindow, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
-    glClearColor(mClearColor.x, mClearColor.y, mClearColor.z, mClearColor.w);
-    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+    // Swap the buffers and prepare for next frame.
     glfwMakeContextCurrent(mWindow);
     glfwSwapBuffers(mWindow);
   }

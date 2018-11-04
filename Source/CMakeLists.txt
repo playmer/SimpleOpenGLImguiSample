@@ -14,9 +14,12 @@ target_link_libraries(SimpleOpenGLImguiSample
 PRIVATE 
     glbinding
     glfw
+    glm_static
     imgui
     STB
 )
+
+target_compile_definitions(SimpleOpenGLImguiSample PRIVATE GLFW_INCLUDE_NONE)
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_link_libraries(SimpleOpenGLImguiSample PRIVATE opengl32.lib)
