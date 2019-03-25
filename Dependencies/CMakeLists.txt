@@ -1,15 +1,7 @@
-# Set some options
-option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
-option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
-option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
-option(GLFW_INSTALL "Generate installation target" OFF)
-add_subdirectory(glfw)
-
 option(BUILD_SHARED_LIBS     "Build shared instead of static libraries." OFF)
 option(OPTION_BUILD_TOOLS    "Build tools."                              OFF)
 option(OPTION_BUILD_EXAMPLES "Build examples."                           OFF)
 add_subdirectory(glbinding)
-
 
 option(GLM_TEST_ENABLE_CXX_17 "Enable C++ 17" ON)
 option(GLM_TEST_ENABLE_LANG_EXTENSIONS "Enable language extensions" OFF)
@@ -26,5 +18,6 @@ option(GLM_TEST_ENABLE_SIMD_AVX2 "Enable AVX2 optimizations" OFF)
 option(GLM_TEST_FORCE_PURE "Force 'pure' instructions" OFF)
 add_subdirectory(glm)
 
+add_subdirectory(SDL)
 add_subdirectory(imgui)
 add_subdirectory(STB)

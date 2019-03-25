@@ -1,5 +1,5 @@
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 
 #include "ApplicationContext.hpp"
@@ -69,56 +69,61 @@ void GL_APIENTRY messageCallback(gl::GLenum source,
          message);
 }
 
-
-static void glfw_error_callback(int aError, const char* aDescription)
+glbinding::ProcAddress GLFunctionLoader(const char* aName)
 {
-  fprintf(stderr, "Glfw Error %d: %s\n", aError, aDescription);
+  return reinterpret_cast<glbinding::ProcAddress>(SDL_GL_GetProcAddress(aName));
 }
 
 namespace SOIS
 {
   void ApplicationInitialization()
   {
-    // Setup window
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
+    // Setup SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
     {
-      return;
+      printf("Error: %s\n", SDL_GetError());
+      exit(-1);
     }
   }
 
   ApplicationContext::ApplicationContext()
   {
-    // Decide GL+GLSL versions
+        // Decide GL+GLSL versions
     #if __APPLE__
-      // GL 3.2 + GLSL 150
-      const char* glsl_version = "#version 150";
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-      glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-      glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+        // GL 3.2 Core + GLSL 150
+        const char* glsl_version = "#version 150";
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     #else
-      // GL 3.0 + GLSL 130
-      const char* glsl_version = "#version 130";
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-      //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-      //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+        // GL 3.0 + GLSL 130
+        const char* glsl_version = "#version 130";
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     #endif
 
     // Create window with graphics context
-    mWindow = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 Sample Application", NULL, NULL);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_DisplayMode current;
+    SDL_GetCurrentDisplayMode(0, &current);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    mWindow = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 Sample Application", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    mContext = SDL_GL_CreateContext(mWindow);
+    SDL_GL_MakeCurrent(mWindow, mContext);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
 
     if (nullptr == mWindow)
     {
       return;
     }
 
-    glfwMakeContextCurrent(mWindow);
-    glfwSwapInterval(1); // Enable vsync
-
     // Initialize OpenGL loader
-    glbinding::initialize(glfwGetProcAddress);
+    glbinding::initialize(GLFunctionLoader);
 
     gl::glEnable(gl::GL_DEBUG_OUTPUT);
     gl::glDebugMessageCallback(messageCallback, this);
@@ -127,7 +132,7 @@ namespace SOIS
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
-    ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
+    ImGui_ImplSDL2_InitForOpenGL(mWindow, mContext);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Setup style
@@ -146,11 +151,11 @@ namespace SOIS
   {
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    glfwDestroyWindow(mWindow);
-    glfwTerminate();
+    SDL_DestroyWindow(mWindow);
+    SDL_Quit();
   }
 
 
@@ -163,8 +168,7 @@ namespace SOIS
   {
     EndFrame();
 
-    if (false == mRunning ||
-        false != glfwWindowShouldClose(mWindow))
+    if (false == mRunning)
     {
       return false;
     }
@@ -181,18 +185,26 @@ namespace SOIS
     // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
     // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
     // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-    glfwPollEvents();
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+      ImGui_ImplSDL2_ProcessEvent(&event);
+      if (event.type == SDL_QUIT)
+        mRunning = false;
+      if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(mWindow))
+        mRunning = false;
+    }
 
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplSDL2_NewFrame(mWindow);
     ImGui::NewFrame();
 
     // Clear the viewport to prepare for user rendering.
     int display_w, display_h;
-    glfwMakeContextCurrent(mWindow);
-    glfwGetFramebufferSize(mWindow, &display_w, &display_h);
-    gl::glViewport(0, 0, display_w, display_h);
+    SDL_GL_MakeCurrent(mWindow, mContext);
+    ImGuiIO& io = ImGui::GetIO();
+    gl::glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     gl::glClearColor(mClearColor.x, mClearColor.y, mClearColor.z, mClearColor.w);
     gl::glClear(gl::GL_COLOR_BUFFER_BIT);
   }
@@ -204,7 +216,7 @@ namespace SOIS
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     // Swap the buffers and prepare for next frame.
-    glfwMakeContextCurrent(mWindow);
-    glfwSwapBuffers(mWindow);
+    SDL_GL_MakeCurrent(mWindow, mContext);
+    SDL_GL_SwapWindow(mWindow);
   }
 }

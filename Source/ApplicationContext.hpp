@@ -2,7 +2,7 @@
 
 #include "imgui.h"
 
-#include <GLFW/glfw3.h> // Include glfw3.h after our OpenGL definitions
+#include <SDL.h> // Include glfw3.h after our OpenGL definitions
 
 #include <glbinding/gl/gl.h>
 #include <glbinding/glbinding.h>
@@ -17,7 +17,8 @@ namespace SOIS
   struct ApplicationContext
   {
   public:
-    GLFWwindow* mWindow;
+    SDL_GLContext mContext;
+    SDL_Window* mWindow;
     glm::vec4 mClearColor;
     bool mRunning;
 

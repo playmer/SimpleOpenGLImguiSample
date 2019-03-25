@@ -16,7 +16,8 @@ PRIVATE
 target_link_libraries(SimpleOpenGLImguiSample 
 PRIVATE 
     glbinding
-    glfw
+    SDL2-static
+    SDL2main
     glm_static
     imgui
     STB
